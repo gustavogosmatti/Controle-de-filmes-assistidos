@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Filmes;
+use App\Filme;
+use App\Http\Requests\FilmesFormRequest;
 use Illuminate\Http\Request;
 
 class FilmeController extends Controller
@@ -12,28 +13,29 @@ class FilmeController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    public function __construct()
+    {
+        return $this->middleware('auth');
+    }
     public function index(Request $request)
     {
-        $data = $request->all();
+        $filmes = Filme::query()->orderBy('nome')->get();
+        $mensagem = $request->session()->get('mensagem');
         return view('filmes.listar', [
-            'data'=> $data
-        ]);
+            'filmes' => $filmes,
+            'mensagem' => $mensagem
+            ]);
     }
-    public function adicionar(){
-        return view('filmes.adicionar');
-    }
+
 
     /**
      * Show the form for creating a new resource.
      *
      * @return \Illuminate\Http\Response
      */
-    public function create(Request $request)
+    public function create()
     {
-        $data = $request->all();
-        return redirect()->route('listar_filmes',[
-            'data'=>$data
-        ]);
+        return view('filmes.adicionar');
     }
 
     /**
@@ -42,9 +44,13 @@ class FilmeController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    
+    public function store(FilmesFormRequest $request)
     {
-        //
+    
+        Filme::create($request->all());
+        $request->session()->flash('mensagem',"Filme $request->nome criada com sucesso");
+        return redirect()->route('listar_filmes');
     }
 
     /**
@@ -66,7 +72,10 @@ class FilmeController extends Controller
      */
     public function edit($id)
     {
-        //
+        $filme = Filme::find($id);
+        return view('filmes.editar', [
+            'filme' => $filme
+        ]);
     }
 
     /**
@@ -76,9 +85,15 @@ class FilmeController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(FilmesFormRequest $request, $id)
     {
-        //
+        $filme = Filme::find($id);
+        $filme->nome = $request->nome;
+        $filme->genero = $request->genero;
+        $filme->classificacaoIndicativa = $request->classificacaoIndicativa;
+        $filme->save();
+        $request->session()->flash('mensagem',"Filme $filme->nome alterado com sucesso!");
+        return redirect()->route('listar_filmes');
     }
 
     /**
@@ -87,8 +102,11 @@ class FilmeController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Request $request,$id)
     {
-        //
+        $filme = Filme::find($id);
+        $filme->delete();
+        $request->session()->flash('mensagem',"Filme $filme->nome removido com sucesso!");
+        return redirect()->route('listar_filmes');
     }
 }

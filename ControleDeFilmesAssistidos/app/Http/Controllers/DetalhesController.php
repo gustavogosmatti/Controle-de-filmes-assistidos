@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Detalhes;
 use App\Filme;
+use App\Http\Requests\DetalhesFormRequest;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Http\Request;
 
@@ -14,14 +15,22 @@ class DetalhesController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index(Request $request, $film)
+    public function __construct()
+    {
+        return $this->middleware('auth');
+    }
+    
+    
+    public function index(Request $request,$film)
     {
         $detalhes = Detalhes::query()->where('filme_id', $film)->get();
         $filme = Filme::find($film);
+        $mensagem = $request->session()->get('mensagem');
         return view('detalhes.listar', [
             'detalhes' => $detalhes,
             'film' => $film,
-            'nomeFilme' => $filme->nome
+            'nomeFilme' => $filme->nome,
+            'mensagem' =>$mensagem
         ]);
     }
 
@@ -32,8 +41,10 @@ class DetalhesController extends Controller
      */
     public function create($filme)
     {
+        $film = Filme::find($filme);
         return view('detalhes.adicionar', [
-            'filme' => $filme
+            'filme' => $filme,
+            'nomeFilme' => $film->nome
         ]);
     }
 
@@ -43,13 +54,15 @@ class DetalhesController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    use DatabaseMigrations;
-    public function store(Request $request, $film)
+
+    public function store(DetalhesFormRequest $request, $film)
     {
 
         $detalhes = new Detalhes($request->all());
         $filme = Filme::find($film);
         $filme->detalhes()->save($detalhes);
+        $request->session()->flash('mensagem',"Informações adicionadas com sucesso!");
+        return redirect('/filmes/' . $film . '/detalhes');
     }
 
     /**
@@ -72,9 +85,11 @@ class DetalhesController extends Controller
     public function edit($filme, $id)
     {
         $detalhes = Detalhes::find($id);
+        $filme = Filme::find($filme);
         return view('detalhes.editar', [
             'detalhes' => $detalhes,
-            'filme' => $filme
+            'filme' => $filme,
+            'nomeFilme' => $filme->nome
         ]);
     }
 
@@ -85,7 +100,7 @@ class DetalhesController extends Controller
      * @param  \App\Detalhes  $detalhes
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $filme, $id)
+    public function update(DetalhesFormRequest $request, $filme, $id)
     {
         $detalhes = Detalhes::find($id);
         $detalhes->data = $request->data;
@@ -93,9 +108,13 @@ class DetalhesController extends Controller
         $detalhes->avaliacao = $request->avaliacao;
         $detalhes->comentario = $request->comentario;
         $detalhes->save();
-        return redirect()->route('listar_detalhes',[
-            'filme'=>$filme
+        $request->session()->flash('mensagem',"Informações alteradas com sucesso!");
+        return redirect()->route('listar_detalhes', [
+            'film' => $filme,
+            'film2' => $filme
         ]);
+
+        //return redirect('/filmes/'.$filme.'/detalhes');
     }
 
     /**
@@ -104,12 +123,14 @@ class DetalhesController extends Controller
      * @param  \App\Detalhes  $detalhes
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id, $filme)
+    public function destroy(Request $request,$filme, $id)
     {
         $detalhes = Detalhes::find($id);
         $detalhes->delete();
-        return redirect()->route('listar_detalhes', [
+        /*return redirect()->route('listar_detalhes', [
             'filme' => $filme
-        ]);
+        ]);*/
+        $request->session()->flash('mensagem',"Informações deletadas com sucesso!");
+        return redirect('/filmes/' . $filme . '/detalhes');
     }
 }
